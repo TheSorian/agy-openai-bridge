@@ -167,3 +167,7 @@ locally instead of spending an Antigravity turn.
 
 Written on 2026-11-16 against `agy` 1.5.7 and OpenCode 2.0.24. The `stream-json` event names are the one
 part that can break with an `agy` update; the parser lives in `runAgy()` and is a few dozen lines.
+
+## License
+
+MIT. See the LICENSE file. Not affiliated with or endorsed by Google.
