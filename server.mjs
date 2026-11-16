@@ -345,14 +345,19 @@ const server = http.createServer(async (req, res) => {
   });
 });
 
+let portRetries = 0;
 server.on("error", (err) => {
-  log(`FATAL ${err && err.message ? err.message : String(err)}`);
   // Another copy may still own the port (logon races, restarts). Wait instead of exiting:
   // the listener is what matters, and a duplicate process that keeps retrying is harmless.
   if (err && err.code === "EADDRINUSE") {
+    portRetries += 1;
+    if (portRetries === 1 || portRetries % 12 === 0) {
+      log(`waiting for port ${PORT}: another copy is listening (attempt ${portRetries})`);
+    }
     setTimeout(() => server.listen(PORT, "127.0.0.1"), 5000);
     return;
   }
+  log(`FATAL ${err && err.message ? err.message : String(err)}`);
   process.exit(1);
 });
 
