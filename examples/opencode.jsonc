@@ -1,0 +1,23 @@
+{
+  // Add this block to your global (~/.config/opencode/opencode.jsonc) or project config.
+  // The bridge does not authenticate; apiKey must still be a non-empty string.
+  // Model IDs must match what `agy models` prints for your account.
+  "providers": {
+    "agy": {
+      "name": "Antigravity (agy)",
+      "package": "@opencode/ai/providers/openai-compatible",
+      "settings": {
+        "baseURL": "http://127.0.0.1:8799/v1",
+        "apiKey": "local-bridge"
+      },
+      "models": {
+        "gemini-3.8-flash-high": { "name": "Gemini 3.8 Flash (High)", "tool_call": false },
+        "gemini-3.8-flash-medium": { "name": "Gemini 3.8 Flash (Medium)", "tool_call": false },
+        "gemini-3.8-flash-low": { "name": "Gemini 3.8 Flash (Low)", "tool_call": false },
+        "claude-sonnet-4-6": { "name": "Claude Sonnet 4.6", "tool_call": false },
+        "claude-opus-4-6-thinking": { "name": "Claude Opus 4.6 (Thinking)", "tool_call": false },
+        "gpt-oss-120b-medium": { "name": "GPT-OSS 120B (Medium)", "tool_call": false }
+      }
+    }
+  }
+}

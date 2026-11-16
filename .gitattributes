@@ -1,0 +1,4 @@
+# Keep sources LF, but Windows scripts must stay CRLF or cmd.exe can misparse labels and blocks.
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf

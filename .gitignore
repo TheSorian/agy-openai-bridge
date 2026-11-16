@@ -1,0 +1,7 @@
+node_modules/
+*.log
+bridge.log
+conversations.json
+stopped
+.env
+.DS_Store

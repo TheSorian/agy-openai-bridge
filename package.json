@@ -1,0 +1,22 @@
+{
+  "name": "agy-openai-bridge",
+  "version": "0.1.0",
+  "description": "Expose Google's Antigravity CLI (agy) as an OpenAI-compatible endpoint for OpenCode V2 and other clients",
+  "type": "module",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs",
+    "smoke": "node smoke.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "antigravity",
+    "agy",
+    "opencode",
+    "openai-compatible",
+    "gemini",
+    "bridge"
+  ]
+}
