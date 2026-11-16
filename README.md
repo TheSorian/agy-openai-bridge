@@ -34,22 +34,20 @@ node server.mjs
 # agy-openai-bridge listening on http://127.0.0.1:8799/v1
 ```
 
-Or with the supervisor that restarts it if it ever dies:
+The supervisor keeps it running and restarts it if it exits:
 
 ```bash
-scripts/start.cmd     # Windows: runs in the foreground and restarts on exit
-scripts/stop.cmd      # sets a stop flag and kills the listener
-# elsewhere: while true; do node server.mjs; sleep 2; done
+node scripts/supervise.mjs          # run, restart on exit
+node scripts/supervise.mjs --stop   # stop the loop and kill the listener
 ```
 
-`start.cmd` clears the stop flag on launch, so `stop.cmd` followed by `start.cmd` works as expected.
-To start it with Windows, put a shortcut to `scripts/start.cmd` in `shell:startup`, or a `.vbs` that runs
-it hidden:
+The same through npm: `npm run supervise` and `npm run stop`.
 
-```vbscript
-Set sh = CreateObject("WScript.Shell")
-sh.Run """C:\path\to\agy-openai-bridge\scripts\start.cmd""", 0, False
-```
+**Windows autostart.** Put a shortcut in `shell:startup` whose target is `node.exe` and whose argument is
+the full path to `scripts/supervise.mjs`; set it to run minimized. Point the startup entry at `node.exe`,
+never at a `.cmd` or `.vbs`: script files referenced from a startup folder are a common antivirus
+quarantine target, and Bitdefender removed this project's `.vbs` and `.cmd` entries before the shortcut
+was switched to the signed `node.exe` binary.
 
 Check it:
 
@@ -65,8 +63,7 @@ curl http://127.0.0.1:8799/v1/models     # model list
 | Path | What it is |
 | --- | --- |
 | `server.mjs` | The bridge. The only file you need to run. |
-| `scripts/start.cmd` | Supervisor loop for Windows, restart-on-exit. |
-| `scripts/stop.cmd` | Stops the loop and the listener. |
+| `scripts/supervise.mjs` | Supervisor: restarts the bridge, or stops it with `--stop`. |
 | `smoke.mjs` | One end-to-end turn, for checking an install. |
 | `examples/opencode.jsonc` | The provider block below, ready to paste. |
 

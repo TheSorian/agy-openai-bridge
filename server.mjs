@@ -347,6 +347,12 @@ const server = http.createServer(async (req, res) => {
 
 server.on("error", (err) => {
   log(`FATAL ${err && err.message ? err.message : String(err)}`);
+  // Another copy may still own the port (logon races, restarts). Wait instead of exiting:
+  // the listener is what matters, and a duplicate process that keeps retrying is harmless.
+  if (err && err.code === "EADDRINUSE") {
+    setTimeout(() => server.listen(PORT, "127.0.0.1"), 5000);
+    return;
+  }
   process.exit(1);
 });
 
