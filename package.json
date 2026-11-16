@@ -7,7 +7,7 @@
   "main": "server.mjs",
   "scripts": {
     "start": "node server.mjs",
-    "supervise": "node scripts/supervise.mjs",
+    "supervise": "node scripts/supervise.mjs --start",
     "stop": "node scripts/supervise.mjs --stop",
     "smoke": "node smoke.mjs"
   },

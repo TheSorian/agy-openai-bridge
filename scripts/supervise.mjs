@@ -1,7 +1,11 @@
 // Supervisor for agy-openai-bridge.
 //
 //   node scripts/supervise.mjs          run the bridge, restarts it if it exits
+//   node scripts/supervise.mjs --start  same, but clears a previous stop first
 //   node scripts/supervise.mjs --stop   stop the loop (flag) and kill the listener
+//
+// Without --start a stop flag wins, so a scheduler that re-runs this file cannot resurrect
+// a bridge you deliberately stopped.
 //
 // One implementation for every platform, and no .cmd/.vbs: script files that a Windows
 // startup entry points at tend to get quarantined by antivirus products, while a signed
@@ -60,6 +64,11 @@ if (process.argv.includes("--stop")) {
     }
   }
   log("stopped. Start again with: node scripts/supervise.mjs");
+  process.exit(0);
+}
+
+if (fs.existsSync(FLAG) && !process.argv.includes("--start")) {
+  log("stopped flag present, not starting (use --start to override)");
   process.exit(0);
 }
 

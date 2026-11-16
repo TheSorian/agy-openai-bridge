@@ -361,6 +361,20 @@ server.on("error", (err) => {
   process.exit(1);
 });
 
+// Under scripts/supervise.mjs, exit if the supervisor is gone: otherwise a restarted
+// supervisor would start a copy that waits forever for a port an orphan still holds.
+// Set AGY_BRIDGE_NO_PARENT_WATCH=1 when running the server directly from a shell you may close.
+if (process.ppid && process.env.AGY_BRIDGE_NO_PARENT_WATCH !== "1") {
+  setInterval(() => {
+    try {
+      process.kill(process.ppid, 0);
+    } catch {
+      log("supervisor gone, exiting");
+      process.exit(0);
+    }
+  }, 10_000).unref();
+}
+
 server.listen(PORT, "127.0.0.1", () => {
   log(`agy-openai-bridge listening on http://127.0.0.1:${PORT}/v1 mode=${FORCED_MODE || "auto"} state=${STATE_DIR}`);
 });

@@ -43,11 +43,16 @@ node scripts/supervise.mjs --stop   # stop the loop and kill the listener
 
 The same through npm: `npm run supervise` and `npm run stop`.
 
-**Windows autostart.** Put a shortcut in `shell:startup` whose target is `node.exe` and whose argument is
-the full path to `scripts/supervise.mjs`; set it to run minimized. Point the startup entry at `node.exe`,
-never at a `.cmd` or `.vbs`: script files referenced from a startup folder are a common antivirus
-quarantine target, and Bitdefender removed this project's `.vbs` and `.cmd` entries before the shortcut
-was switched to the signed `node.exe` binary.
+**Windows autostart.** Run `scripts\install-task.ps1` once. It registers a hidden scheduled task that
+runs `node.exe` with `scripts/supervise.mjs` at logon, for your user only. Task Scheduler starts the
+process with no console window, so nothing appears in the taskbar. `-Uninstall` removes it again.
+
+Why not a Startup shortcut or a `.cmd`/`.vbs` in `shell:startup`: script files there get quarantined
+(Bitdefender removed this project's `.vbs` and then its `.cmd` during development), and a shortcut to
+`node.exe` works but leaves a minimized console window.
+
+The task passes `--start`, so logon always brings the bridge up. `npm run stop` keeps it down until the
+next logon or a manual start, which is what "stopped" should mean.
 
 Check it:
 
@@ -64,6 +69,7 @@ curl http://127.0.0.1:8799/v1/models     # model list
 | --- | --- |
 | `server.mjs` | The bridge. The only file you need to run. |
 | `scripts/supervise.mjs` | Supervisor: restarts the bridge, or stops it with `--stop`. |
+| `scripts/install-task.ps1` | Registers the autostart task on Windows, or removes it with `-Uninstall`. |
 | `smoke.mjs` | One end-to-end turn, for checking an install. |
 | `examples/opencode.jsonc` | The provider block below, ready to paste. |
 
