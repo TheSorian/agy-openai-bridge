@@ -4,7 +4,7 @@
 // State (logs + conversation bindings) lives in %LOCALAPPDATA%\agy-bridge
 // (or $XDG_STATE_HOME / ~/.local/state). The code stays where you cloned it.
 import http from "node:http";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -41,7 +41,7 @@ function saveConversations() {
 }
 
 // Fallback list; `agy models` is the source of truth and differs per account/plan.
-const MODELS = [
+const STATIC_MODELS = [
   "gemini-3.8-flash-high",
   "gemini-3.8-flash-medium",
   "gemini-3.8-flash-low",
@@ -49,6 +49,33 @@ const MODELS = [
   "claude-opus-4-6-thinking",
   "gpt-oss-120b-medium",
 ];
+
+// The inventory lives in the account, not in this file: ask `agy models` and cache the answer,
+// because the call costs a network round trip. A failure keeps the last good list.
+const MODELS_TTL = Number(process.env.AGY_BRIDGE_MODELS_TTL || 300_000);
+let modelsCache = { at: 0, ids: STATIC_MODELS };
+
+function listModels() {
+  if (Date.now() - modelsCache.at < MODELS_TTL) return modelsCache.ids;
+  try {
+    const out = execFileSync(AGY, ["models"], {
+      encoding: "utf8",
+      timeout: 30_000,
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    const ids = out
+      .replace(/\u001b\[[0-9;]*m/g, "")
+      .split(/\r?\n/)
+      .map((line) => line.split("\t")[0].trim())
+      .filter((id) => /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/.test(id));
+    if (ids.length) modelsCache = { at: Date.now(), ids };
+  } catch (err) {
+    log(`models: could not read \`agy models\`: ${err && err.message}`);
+    modelsCache = { at: Date.now(), ids: modelsCache.ids };
+  }
+  return modelsCache.ids;
+}
 
 const textOf = (content) => {
   if (typeof content === "string") return content;
@@ -194,7 +221,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { "content-type": "application/json" });
     res.end(JSON.stringify({
       object: "list",
-      data: MODELS.map((id) => ({ id, object: "model", created: 0, owned_by: "agy" })),
+      data: listModels().map((id) => ({ id, object: "model", created: 0, owned_by: "agy" })),
     }));
     return;
   }
@@ -213,7 +240,11 @@ const server = http.createServer(async (req, res) => {
   }
 
   const messages = Array.isArray(body.messages) ? body.messages : [];
-  const model = typeof body.model === "string" ? body.model : MODELS[1];
+  let model = body.model;
+  if (typeof model !== "string") {
+    const inventory = listModels();
+    model = inventory.find((id) => id.endsWith("-medium")) || inventory[0];
+  }
   const wantStream = Boolean(body.stream);
   debug(`model=${model} tools=${JSON.stringify((Array.isArray(body.tools) ? body.tools : []).map((t) => (t && t.function && t.function.name) || (t && t.name)).filter(Boolean))}`);
 
