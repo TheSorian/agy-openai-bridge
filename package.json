@@ -9,6 +9,7 @@
     "start": "node server.mjs",
     "supervise": "node scripts/supervise.mjs --start",
     "stop": "node scripts/supervise.mjs --stop",
+    "models": "node scripts/sync-models.mjs",
     "smoke": "node smoke.mjs"
   },
   "engines": {

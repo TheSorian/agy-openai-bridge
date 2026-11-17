@@ -76,6 +76,7 @@ curl http://127.0.0.1:8799/v1/models     # model list
 | `scripts/supervise.mjs` | Supervisor: restarts the bridge, or stops it with `--stop`. |
 | `scripts/install-task.ps1` | Registers the autostart task on Windows, or removes it with `-Uninstall`. |
 | `scripts/start-hidden.vbs` | The launcher the task calls: starts the supervisor with no console at all. |
+| `scripts/sync-models.mjs` | Rewrites the OpenCode model list from `agy models`, folding thinking levels. |
 | `smoke.mjs` | One end-to-end turn, for checking an install. |
 | `examples/opencode.jsonc` | The provider block below, ready to paste. |
 
@@ -99,9 +100,16 @@ OpenCode's schema rejects `false`.
         "apiKey": "local-bridge"
       },
       "models": {
-        "gemini-3.8-flash-high":   { "name": "Gemini 3.8 Flash (High)",   "tool_call": false },
-        "gemini-3.8-flash-medium": { "name": "Gemini 3.8 Flash (Medium)", "tool_call": false },
-        "gemini-3.8-flash-low":    { "name": "Gemini 3.8 Flash (Low)",    "tool_call": false },
+        "gemini-3.8-flash": {
+          "name": "Gemini 3.8 Flash",
+          "modelID": "gemini-3.8-flash-medium",
+          "capabilities": { "reasoning": { "supported": true, "effort": ["low", "medium", "high"] } },
+          "variants": [
+            { "id": "low", "body": { "model": "gemini-3.8-flash-low" } },
+            { "id": "medium", "body": { "model": "gemini-3.8-flash-medium" } },
+            { "id": "high", "body": { "model": "gemini-3.8-flash-high" } }
+          ]
+        },
         "claude-sonnet-4-6":       { "name": "Claude Sonnet 4.6",         "tool_call": false },
         "claude-opus-4-6-thinking":{ "name": "Claude Opus 4.6 (Thinking)","tool_call": false },
         "gpt-oss-120b-medium":     { "name": "GPT-OSS 120B (Medium)",     "tool_call": false }
@@ -114,6 +122,39 @@ OpenCode's schema rejects `false`.
 Model IDs must match what `agy models` prints for **your** account and plan. `tool_call: false` is
 deliberate: the bridge does not forward tool calls, so `agy` uses its own tools instead of pretending to
 call the client's.
+
+### Thinking levels
+
+`agy` lists each thinking level as its own model (`gemini-3.8-flash-low`, `-medium`, `-high`).
+OpenCode already has a level selector for a model - variants - so listing all three would give you two
+selectors and three copies of the same model. The block above collapses them into one entry:
+
+- `modelID` is the level used when no variant is chosen (`medium`).
+- Each variant puts the real `agy` model in the request `body.model`. A variant cannot change
+  `modelID`, but its `body` is merged into the request, which is enough here.
+
+Pick the level in the model selector, or name it directly: `--model agy/gemini-3.8-flash#high`.
+
+Models without sibling levels (Claude, GPT-OSS) stay one entry each. OpenCode's OpenAI-compatible
+package still offers low/medium/high on them, but the bridge ignores the `reasoning_effort` field, so
+those levels are cosmetic: only the 3.8 Flash variants above change the model that `agy` runs.
+
+### New models
+
+The bridge's `/v1/models` asks `agy models` and caches the answer for `AGY_BRIDGE_MODELS_TTL`, so a
+model added to your account shows up there on its own.
+
+OpenCode is the part that does not discover it: for a custom provider it only shows the models named
+in the config. Run:
+
+```bash
+npm run models
+```
+
+It reads `agy models`, folds thinking levels, keeps names, limits and hand-written entries, writes
+`providers.agy.models`, and leaves a timestamped `.bak-` copy next to the config. Use `--dry` to see
+the block first, or `--config <file>` for another file. OpenCode reloads the config on save, so no
+restart is needed. Nothing rewrites your global config behind your back: that stays a deliberate step.
 
 ## How it works
 
@@ -152,6 +193,7 @@ locally instead of spending an Antigravity turn.
 | `AGY_BRIDGE_MODE` | *(auto)* | Force `plan` or `normal` for every turn. |
 | `AGY_BRIDGE_STATE` | `%LOCALAPPDATA%\agy-bridge` | Directory for `bridge.log` and `conversations.json`. |
 | `AGY_BRIDGE_CWD` | *(none)* | Fallback project directory when the client sends no environment block. |
+| `AGY_BRIDGE_MODELS_TTL` | `300000` | How long `/v1/models` caches `agy models`, in milliseconds. |
 | `AGY_BRIDGE_DEBUG` | *(off)* | Log the model and tool list of every request. |
 
 ## What this is not
@@ -171,6 +213,8 @@ locally instead of spending an Antigravity turn.
 - **`unknown cwd`:** the client sent no working directory; set `AGY_BRIDGE_CWD`.
 - **Empty or `[agy error]` replies:** run `agy models` to confirm the account is signed in and the model
   still exists. `agy changelog` will tell you whether the CLI changed its output format.
+- **A model that `agy models` lists is missing from `/models`:** run `npm run models`; OpenCode only
+  lists the models in the config for a custom provider.
 
 ## Status
 

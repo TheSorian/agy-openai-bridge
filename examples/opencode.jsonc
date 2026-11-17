@@ -1,7 +1,8 @@
 {
   // Add this block to your global (~/.config/opencode/opencode.jsonc) or project config.
   // The bridge does not authenticate; apiKey must still be a non-empty string.
-  // Model IDs must match what `agy models` prints for your account.
+  // Model IDs must match what `agy models` prints for your account; `npm run models` writes this
+  // list for you.
   "providers": {
     "agy": {
       "name": "Antigravity (agy)",
@@ -11,9 +12,16 @@
         "apiKey": "local-bridge"
       },
       "models": {
-        "gemini-3.8-flash-high": { "name": "Gemini 3.8 Flash (High)", "tool_call": false },
-        "gemini-3.8-flash-medium": { "name": "Gemini 3.8 Flash (Medium)", "tool_call": false },
-        "gemini-3.8-flash-low": { "name": "Gemini 3.8 Flash (Low)", "tool_call": false },
+        "gemini-3.8-flash": {
+          "name": "Gemini 3.8 Flash",
+          "modelID": "gemini-3.8-flash-medium",
+          "capabilities": { "reasoning": { "supported": true, "effort": ["low", "medium", "high"] } },
+          "variants": [
+            { "id": "low", "body": { "model": "gemini-3.8-flash-low" } },
+            { "id": "medium", "body": { "model": "gemini-3.8-flash-medium" } },
+            { "id": "high", "body": { "model": "gemini-3.8-flash-high" } }
+          ]
+        },
         "claude-sonnet-4-6": { "name": "Claude Sonnet 4.6", "tool_call": false },
         "claude-opus-4-6-thinking": { "name": "Claude Opus 4.6 (Thinking)", "tool_call": false },
         "gpt-oss-120b-medium": { "name": "GPT-OSS 120B (Medium)", "tool_call": false }
