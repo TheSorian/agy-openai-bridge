@@ -3,10 +3,13 @@
 #   powershell -ExecutionPolicy Bypass -File scripts\install-task.ps1
 #   powershell -ExecutionPolicy Bypass -File scripts\install-task.ps1 -Uninstall
 #
-# Why a scheduled task instead of a Startup shortcut: Task Scheduler starts the process without
-# a console window, while a shortcut to node.exe leaves a minimized console in the taskbar.
-# Pointing a startup entry at a .cmd/.vbs instead tends to get the script quarantined by
-# antivirus software, which is what happened during development.
+# The task runs wscript, which is a GUI host: no console window is ever created, and it in turn
+# starts node with a hidden window (see scripts\start-hidden.vbs). Starting node.exe directly from
+# Task Scheduler does create a console, and Windows Terminal shows it even though the task is
+# marked hidden.
+#
+# A shortcut or a .cmd/.vbs inside shell:startup is not used: script files there get quarantined
+# (Bitdefender removed this project's .vbs and then its .cmd during development).
 param(
   [string]$TaskName = "agy-openai-bridge",
   [switch]$Uninstall
@@ -20,10 +23,12 @@ if ($Uninstall) {
   return
 }
 
-$user   = "$env:USERDOMAIN\$env:USERNAME"
-$node   = (Get-Command node -ErrorAction Stop).Source
-$root   = Split-Path -Parent $PSScriptRoot
-$script = Join-Path $PSScriptRoot "supervise.mjs"
+$user    = "$env:USERDOMAIN\$env:USERNAME"
+$root    = Split-Path -Parent $PSScriptRoot
+$vbs     = Join-Path $PSScriptRoot "start-hidden.vbs"
+$wscript = Join-Path $env:SystemRoot "System32\wscript.exe"
+
+if (-not (Test-Path $vbs)) { throw "missing launcher: $vbs" }
 
 $xml = @"
 <?xml version="1.0" encoding="UTF-16"?>
@@ -69,8 +74,8 @@ $xml = @"
   </Settings>
   <Actions Context="Author">
     <Exec>
-      <Command>$node</Command>
-      <Arguments>"$script" --start</Arguments>
+      <Command>$wscript</Command>
+      <Arguments>//B "$vbs"</Arguments>
       <WorkingDirectory>$root</WorkingDirectory>
     </Exec>
   </Actions>
@@ -85,8 +90,8 @@ Remove-Item $tmp -Force
 if ($code -ne 0) { throw "schtasks failed with $code" }
 
 "registered $TaskName"
-"  runs  : $node `"$script`" --start"
-"  at    : logon of $user, hidden, no console window, single instance"
+"  runs  : wscript //B $vbs"
+"  at    : logon of $user, single instance, no console window"
 "  stop  : 'npm run stop' keeps it down until the next logon or manual start"
 ""
 "Verify with:  schtasks /query /tn $TaskName /v /fo LIST"

@@ -43,16 +43,21 @@ node scripts/supervise.mjs --stop   # stop the loop and kill the listener
 
 The same through npm: `npm run supervise` and `npm run stop`.
 
-**Windows autostart.** Run `scripts\install-task.ps1` once. It registers a hidden scheduled task that
-runs `node.exe` with `scripts/supervise.mjs` at logon, for your user only. Task Scheduler starts the
-process with no console window, so nothing appears in the taskbar. `-Uninstall` removes it again.
+**Windows autostart.** Run `scripts\install-task.ps1` once. It registers a hidden scheduled task for
+your user that runs `scripts\start-hidden.vbs` through `wscript.exe` at logon. `wscript` is a GUI host,
+so no console is ever created, and the launcher starts `node.exe` with a hidden window. `-Uninstall`
+removes the task again.
+
+Starting `node.exe` straight from Task Scheduler does not stay invisible: the task creates a console,
+and with Windows Terminal as the default terminal that console is a window on screen even though the
+task is marked hidden. Hence the `wscript` hop before node.
 
 Why not a Startup shortcut or a `.cmd`/`.vbs` in `shell:startup`: script files there get quarantined
 (Bitdefender removed this project's `.vbs` and then its `.cmd` during development), and a shortcut to
 `node.exe` works but leaves a minimized console window.
 
-The task passes `--start`, so logon always brings the bridge up. `npm run stop` keeps it down until the
-next logon or a manual start, which is what "stopped" should mean.
+The launcher passes `--start`, so logon always brings the bridge up. `npm run stop` keeps it down until
+the next logon or a manual start, which is what "stopped" should mean.
 
 Check it:
 
@@ -70,6 +75,7 @@ curl http://127.0.0.1:8799/v1/models     # model list
 | `server.mjs` | The bridge. The only file you need to run. |
 | `scripts/supervise.mjs` | Supervisor: restarts the bridge, or stops it with `--stop`. |
 | `scripts/install-task.ps1` | Registers the autostart task on Windows, or removes it with `-Uninstall`. |
+| `scripts/start-hidden.vbs` | The launcher the task calls: starts the supervisor with no console at all. |
 | `smoke.mjs` | One end-to-end turn, for checking an install. |
 | `examples/opencode.jsonc` | The provider block below, ready to paste. |
 
